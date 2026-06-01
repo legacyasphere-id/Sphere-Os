@@ -51,7 +51,7 @@ async function handleRegister() {
       <!-- Logo -->
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-gray-900">
-          Founder<span class="text-indigo-600">OS</span>
+          Sphere<span class="text-indigo-600">OS</span>
         </h1>
         <p class="mt-2 text-sm text-gray-500">Create your account</p>
       </div>

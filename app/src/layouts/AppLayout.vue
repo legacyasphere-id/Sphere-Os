@@ -17,7 +17,7 @@ async function handleLogout() {
     <aside class="w-64 flex flex-col bg-gray-900 text-white flex-shrink-0">
       <!-- Logo -->
       <div class="flex items-center h-16 px-6 border-b border-gray-800">
-        <span class="text-xl font-bold tracking-tight text-white">Founder<span class="text-indigo-400">OS</span></span>
+        <span class="text-xl font-bold tracking-tight text-white">Sphere<span class="text-indigo-400">OS</span></span>
       </div>
 
       <!-- Navigation -->

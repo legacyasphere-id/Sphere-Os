@@ -15,7 +15,7 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $user = User::firstOrCreate(
-            ['email' => 'demo@founderos.app'],
+            ['email' => 'demo@sphereos.app'],
             ['name' => 'Demo Founder', 'password' => Hash::make('password')],
         );
 

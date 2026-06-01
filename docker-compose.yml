@@ -12,7 +12,7 @@ services:
     depends_on:
       - db
     networks:
-      - founderos
+      - sphereos
 
   frontend:
     build:
@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - founderos
+      - sphereos
 
   nginx:
     image: nginx:alpine
@@ -35,23 +35,23 @@ services:
       - app
       - frontend
     networks:
-      - founderos
+      - sphereos
 
   db:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: founderos
+      MYSQL_DATABASE: sphereos
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     networks:
-      - founderos
+      - sphereos
 
 networks:
-  founderos:
+  sphereos:
     driver: bridge
 
 volumes:
