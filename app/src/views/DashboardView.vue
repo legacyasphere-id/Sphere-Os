@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/api'
+import { aiEnabled } from '@/composables/useAI'
 
 interface Task {
   id: number
@@ -41,9 +42,21 @@ interface DashboardData {
   recent_clients: RecentClient[]
 }
 
+interface AIUsageDay { date: string; calls: number; cost_usd: number }
+interface AIUsageFeature { calls: number; cost_usd: number }
+interface AIUsage {
+  period: string
+  total_calls: number
+  total_tokens: number
+  total_cost_usd: number
+  by_feature: Record<string, AIUsageFeature>
+  daily: AIUsageDay[]
+}
+
 const data = ref<DashboardData | null>(null)
 const loading = ref(true)
 const error = ref('')
+const aiUsage = ref<AIUsage | null>(null)
 
 onMounted(async () => {
   try {
@@ -53,6 +66,15 @@ onMounted(async () => {
     error.value = 'Failed to load dashboard data.'
   } finally {
     loading.value = false
+  }
+
+  if (aiEnabled) {
+    try {
+      const res = await api.get('/ai/usage')
+      aiUsage.value = res.data
+    } catch {
+      // AI usage is optional — fail silently
+    }
   }
 })
 
@@ -240,6 +262,32 @@ function clientStatusClass(status: string): string {
               {{ client.status }}
             </span>
           </RouterLink>
+        </div>
+      </div>
+      <!-- AI Usage Card -->
+      <div v-if="aiEnabled && aiUsage" class="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-gray-900">AI Usage — {{ aiUsage.period }}</h2>
+          <span class="text-xs text-gray-400">This month</span>
+        </div>
+        <div class="px-6 py-4 grid grid-cols-3 gap-6">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Total Calls</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900">{{ aiUsage.total_calls }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Tokens Used</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900">{{ aiUsage.total_tokens.toLocaleString() }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Total Cost</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900">${{ aiUsage.total_cost_usd.toFixed(4) }}</p>
+          </div>
+        </div>
+        <div v-if="Object.keys(aiUsage.by_feature).length" class="px-6 pb-4 flex flex-wrap gap-3">
+          <div v-for="(feat, key) in aiUsage.by_feature" :key="key" class="text-xs bg-indigo-50 text-indigo-700 rounded-full px-3 py-1 capitalize">
+            {{ key }}: {{ feat.calls }} calls · ${{ feat.cost_usd.toFixed(4) }}
+          </div>
         </div>
       </div>
     </template>

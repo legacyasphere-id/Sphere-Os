@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AIController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ContactController;
@@ -26,4 +27,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('projects.tasks', TaskController::class)->shallow();
+
+    Route::prefix('ai')->middleware('throttle:20,1')->group(function () {
+        Route::post('break-tasks',        [AIController::class, 'breakTasks']);
+        Route::post('generate-proposal',  [AIController::class, 'generateProposal']);
+        Route::post('summarize',          [AIController::class, 'summarize']);
+        Route::get('usage',               [AIController::class, 'usage']);
+    });
 });

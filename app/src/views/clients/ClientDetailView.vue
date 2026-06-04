@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/lib/api'
+import { aiEnabled, useSummarizeClient } from '@/composables/useAI'
 
 interface Contact {
   id: number
@@ -45,6 +46,10 @@ const saving = ref(false)
 
 const editForm = reactive<Partial<Client>>({})
 const contactForm = reactive({ name: '', email: '', phone: '', role: '', notes: '' })
+
+// AI
+const showSummaryModal = ref(false)
+const summarize = useSummarizeClient()
 
 async function fetchClient() {
   loading.value = true
@@ -137,6 +142,14 @@ function formatDate(d: string | null) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
+
+async function openSummaryModal() {
+  summarize.reset()
+  showSummaryModal.value = true
+  if (client.value) {
+    await summarize.generate(client.value.id)
+  }
+}
 </script>
 
 <template>
@@ -171,9 +184,10 @@ function formatDate(d: string | null) {
             {{ client.status }}
           </span>
         </div>
-        <button @click="openEdit" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-          Edit
-        </button>
+        <div class="flex items-center gap-2">
+          <button v-if="aiEnabled" @click="openSummaryModal" class="px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100">Summarize Client</button>
+          <button @click="openEdit" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Edit</button>
+        </div>
       </div>
 
       <!-- Tabs -->
@@ -288,6 +302,43 @@ function formatDate(d: string | null) {
         </div>
       </div>
     </template>
+
+    <!-- AI Summarize Modal -->
+    <Teleport to="body">
+      <div v-if="showSummaryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="showSummaryModal = false" />
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg p-6 z-10">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Client Summary</h2>
+          <p class="text-sm text-gray-500 mb-5">AI-generated snapshot of your client relationship.</p>
+
+          <div v-if="summarize.loading.value" class="flex items-center gap-3 py-6 text-gray-500">
+            <svg class="animate-spin h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span class="text-sm">Generating summary...</span>
+          </div>
+
+          <div v-else-if="summarize.error.value" class="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3 mb-4">
+            {{ summarize.error.value }}
+          </div>
+
+          <div v-else-if="summarize.summary.value" class="space-y-4">
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <p class="text-sm text-gray-800 leading-relaxed">{{ summarize.summary.value }}</p>
+            </div>
+            <div v-if="summarize.meta.value" class="text-xs text-gray-400">
+              {{ summarize.meta.value.model }} · {{ summarize.meta.value.tokens_used }} tokens · ${{ summarize.meta.value.cost_usd.toFixed(4) }}
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 mt-6">
+            <button v-if="summarize.summary.value && !summarize.loading.value" @click="summarize.generate(client!.id)" class="text-sm text-gray-500 hover:text-gray-700 mr-auto">Regenerate</button>
+            <button @click="showSummaryModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Edit Client Modal -->
     <Teleport to="body">

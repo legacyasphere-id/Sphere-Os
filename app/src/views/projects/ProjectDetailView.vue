@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/lib/api'
+import { aiEnabled, useBreakTasks, useGenerateProposal } from '@/composables/useAI'
 
 interface Task {
   id: number
@@ -31,6 +32,17 @@ const showEditModal = ref(false)
 const showTaskModal = ref(false)
 const saving = ref(false)
 const editingTask = ref<Task | null>(null)
+
+// AI
+const showBreakTasksModal = ref(false)
+const breakTasksFocus = ref('')
+const breakTasksSelectedIds = ref<number[]>([])
+const breakTasksAdding = ref(false)
+const breakTasks = useBreakTasks()
+
+const showProposalPanel = ref(false)
+const proposalTone = ref<'professional' | 'casual' | 'formal'>('professional')
+const proposal = useGenerateProposal()
 
 const editForm = reactive({
   name: '',
@@ -186,6 +198,62 @@ function isOverdue(d: string | null, status: string) {
   if (!d || status === 'done') return false
   return new Date(d) < new Date()
 }
+
+function openBreakTasksModal() {
+  breakTasksFocus.value = ''
+  breakTasks.reset()
+  breakTasksSelectedIds.value = []
+  showBreakTasksModal.value = true
+}
+
+async function runBreakTasks() {
+  if (!project.value) return
+  await breakTasks.generate(project.value.id, breakTasksFocus.value)
+  breakTasksSelectedIds.value = breakTasks.tasks.value.map((_, i) => i)
+}
+
+async function addSelectedTasks() {
+  if (!project.value || breakTasksAdding.value) return
+  breakTasksAdding.value = true
+  const selected = breakTasks.tasks.value.filter((_, i) => breakTasksSelectedIds.value.includes(i))
+  try {
+    for (const t of selected) {
+      const res = await api.post(`/projects/${project.value!.id}/tasks`, {
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        status: 'todo',
+        ai_generated: true,
+      })
+      project.value!.tasks.push(res.data)
+    }
+    showBreakTasksModal.value = false
+  } catch {
+    error.value = 'Failed to add tasks.'
+  } finally {
+    breakTasksAdding.value = false
+  }
+}
+
+function toggleBreakTaskSelection(i: number) {
+  const idx = breakTasksSelectedIds.value.indexOf(i)
+  if (idx !== -1) {
+    breakTasksSelectedIds.value.splice(idx, 1)
+  } else {
+    breakTasksSelectedIds.value.push(i)
+  }
+}
+
+function openProposalPanel() {
+  proposal.reset()
+  proposalTone.value = 'professional'
+  showProposalPanel.value = true
+}
+
+async function runGenerateProposal() {
+  if (!project.value) return
+  await proposal.generate(project.value.id, proposalTone.value)
+}
 </script>
 
 <template>
@@ -226,8 +294,12 @@ function isOverdue(d: string | null, status: string) {
             <span v-if="project.due_date" class="text-sm text-gray-400">Due {{ formatDate(project.due_date) }}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <button @click="openEditProject" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Edit</button>
+          <template v-if="aiEnabled">
+            <button @click="openBreakTasksModal" class="px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100">Break Down Tasks</button>
+            <button @click="openProposalPanel" class="px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100">Generate Proposal</button>
+          </template>
           <button @click="openAddTask" class="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">+ Add Task</button>
         </div>
       </div>
@@ -397,6 +469,102 @@ function isOverdue(d: string | null, status: string) {
             <button @click="saveProject" :disabled="saving" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Break Down Tasks Modal -->
+    <Teleport to="body">
+      <div v-if="showBreakTasksModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="showBreakTasksModal = false" />
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 z-10 max-h-[90vh] overflow-y-auto">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Break Down Tasks</h2>
+          <p class="text-sm text-gray-500 mb-5">AI will suggest actionable tasks for this project.</p>
+
+          <div v-if="!breakTasks.tasks.value.length" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Focus area (optional)</label>
+              <input v-model="breakTasksFocus" type="text" placeholder="e.g. backend API, design system" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div v-if="breakTasks.error.value" class="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">{{ breakTasks.error.value }}</div>
+            <div class="flex justify-end gap-3">
+              <button @click="showBreakTasksModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button @click="runBreakTasks" :disabled="breakTasks.loading.value" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                {{ breakTasks.loading.value ? 'Generating...' : 'Generate Tasks' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="space-y-3">
+            <p class="text-sm text-gray-600 font-medium mb-2">Select tasks to add:</p>
+            <div v-for="(task, i) in breakTasks.tasks.value" :key="i" class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors" :class="breakTasksSelectedIds.includes(i) ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-white'" @click="toggleBreakTaskSelection(i)">
+              <input type="checkbox" :checked="breakTasksSelectedIds.includes(i)" class="mt-0.5 h-4 w-4 text-indigo-600 rounded border-gray-300 cursor-pointer" @click.stop="toggleBreakTaskSelection(i)" />
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900">{{ task.title }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ task.description }}</p>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="text-xs px-1.5 py-0.5 rounded font-medium capitalize" :class="{ high: 'bg-red-100 text-red-700', medium: 'bg-yellow-100 text-yellow-700', low: 'bg-gray-100 text-gray-500' }[task.priority]">{{ task.priority }}</span>
+                  <span class="text-xs text-gray-400">~{{ task.estimated_days }}d</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="breakTasks.meta.value" class="text-xs text-gray-400 pt-1">
+              {{ breakTasks.tasks.value.length }} tasks · {{ breakTasks.meta.value.tokens_used }} tokens · ${{ breakTasks.meta.value.cost_usd.toFixed(4) }}
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+              <button @click="breakTasks.reset(); breakTasksSelectedIds = []" class="text-sm text-gray-500 hover:text-gray-700">Try again</button>
+              <div class="flex gap-3">
+                <button @click="showBreakTasksModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Discard</button>
+                <button @click="addSelectedTasks" :disabled="breakTasksSelectedIds.length === 0 || breakTasksAdding" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                  {{ breakTasksAdding ? 'Adding...' : `Add ${breakTasksSelectedIds.length} Task${breakTasksSelectedIds.length !== 1 ? 's' : ''}` }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Generate Proposal Panel -->
+    <Teleport to="body">
+      <div v-if="showProposalPanel" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="showProposalPanel = false" />
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 z-10 max-h-[90vh] overflow-y-auto">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Generate Proposal</h2>
+          <p class="text-sm text-gray-500 mb-5">AI will write a project proposal based on your project details.</p>
+
+          <div v-if="!proposal.proposal.value" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Tone</label>
+              <select v-model="proposalTone" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="formal">Formal</option>
+              </select>
+            </div>
+            <div v-if="proposal.error.value" class="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">{{ proposal.error.value }}</div>
+            <div class="flex justify-end gap-3">
+              <button @click="showProposalPanel = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button @click="runGenerateProposal" :disabled="proposal.loading.value" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                {{ proposal.loading.value ? 'Generating...' : 'Generate Proposal' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="space-y-4">
+            <div v-if="proposal.meta.value" class="text-xs text-gray-400">
+              {{ proposal.meta.value.model }} · {{ proposal.meta.value.tokens_used }} tokens · ${{ proposal.meta.value.cost_usd.toFixed(4) }} · {{ proposal.meta.value.latency_ms }}ms
+            </div>
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <pre class="text-sm text-gray-800 whitespace-pre-wrap font-sans">{{ proposal.proposal.value }}</pre>
+            </div>
+            <div class="flex justify-between">
+              <button @click="proposal.reset()" class="text-sm text-gray-500 hover:text-gray-700">Regenerate</button>
+              <button @click="showProposalPanel = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+            </div>
           </div>
         </div>
       </div>
