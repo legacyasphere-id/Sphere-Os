@@ -1,2 +1,196 @@
+<div align="center">
+
 # Sphere-Os
-Sphere-Os is an AI-powered operating system for founders and small businesses that combines CRM, project management, proposals, finance, knowledge management, and AI assistance into one intelligent workspace. Think with AI. Build with AI. Operate with AI.
+
+### AI-Powered Operating System for Founders & Small Businesses
+
+*CRM · Project Management · Proposals · Finance · Knowledge Base · AI Assistant — all in one workspace.*
+
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com)
+[![Vue](https://img.shields.io/badge/Vue-3-4FC08D?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+
+</div>
+
+---
+
+## What Is Sphere-Os?
+
+Sphere-Os is a unified business operating system built for founders and small teams. Instead of juggling five separate SaaS tools, you get one integrated workspace where your CRM, projects, proposals, finances, and AI assistant all share the same data.
+
+> *Think with AI. Build with AI. Operate with AI.*
+
+---
+
+## Features
+
+| Module | Description |
+|--------|-------------|
+| **CRM** | Contacts, companies, deal pipeline, and activity history |
+| **Project Management** | Tasks, milestones, team assignments, and progress tracking |
+| **Proposals** | Create and send client proposals with line items and e-sign |
+| **Finance** | Invoices, expenses, and revenue overview |
+| **Knowledge Base** | Internal wiki and document storage |
+| **AI Assistant** | Context-aware AI integrated across all modules |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Backend** | Laravel 12 (PHP), REST API |
+| **Frontend** | Vue 3, TypeScript, Vite 8, Tailwind CSS v4 |
+| **State** | Pinia |
+| **Database** | MySQL 8 (Docker) · PostgreSQL via Supabase (cloud option) |
+| **Routing** | Vue Router v5 |
+| **HTTP Client** | Axios |
+| **Testing** | Playwright (E2E) |
+| **Infrastructure** | Docker Compose, Nginx, PHP-FPM |
+
+---
+
+## Project Structure
+
+```
+sphere-os/
+├── api/                  # Laravel backend (REST API)
+│   ├── app/              # Controllers, models, services
+│   ├── database/         # Migrations and seeders
+│   ├── routes/           # API route definitions
+│   └── tests/            # PHPUnit tests
+│
+├── app/                  # Vue 3 frontend (SPA)
+│   └── src/
+│       ├── components/   # Reusable UI components
+│       ├── pages/        # Route-level views
+│       └── stores/       # Pinia state stores
+│
+├── docker-compose.yml    # Local dev stack (API + frontend + Nginx + MySQL)
+└── nginx.conf            # Reverse-proxy config
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Docker & Docker Compose
+- Node.js ≥ 20
+- PHP 8.3 + Composer (for local dev without Docker)
+
+### Option A — Docker (recommended)
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/legacyasphere-id/Sphere-Os.git
+cd Sphere-Os
+
+# 2. Copy and configure environment files
+cp .env.example .env
+cp api/.env.example api/.env
+# Edit api/.env — set DB_ROOT_PASSWORD, DB_USERNAME, DB_PASSWORD
+
+# 3. Start all services (API + frontend + Nginx + MySQL)
+docker compose up -d
+
+# 4. Run migrations and seed demo data
+docker compose exec app php artisan migrate --seed
+```
+
+Open `http://localhost` in your browser.
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost |
+| API | http://localhost/api |
+
+### Option B — Local (without Docker)
+
+```bash
+# --- Backend ---
+cd api
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve          # runs on :8000
+
+# --- Frontend (new terminal) ---
+cd app
+npm install
+npm run dev                # runs on :5173
+```
+
+---
+
+## Available Scripts
+
+### Frontend (`/app`)
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server with hot reload |
+| `npm run build` | Type-check + production build |
+| `npm run preview` | Preview production build locally |
+| `npm run test:e2e` | Run Playwright E2E tests |
+| `npm run type-check` | TypeScript type check only |
+
+### Backend (`/api`)
+
+| Command | Description |
+|---------|-------------|
+| `php artisan serve` | Start development server |
+| `php artisan migrate` | Run database migrations |
+| `php artisan migrate --seed` | Migrate and load demo data |
+| `php artisan test` | Run PHPUnit tests |
+
+---
+
+## Environment Variables
+
+Copy `api/.env.example` to `api/.env` and fill in:
+
+```env
+# Application
+APP_NAME=SphereOs
+APP_KEY=           # generated by php artisan key:generate
+APP_URL=http://localhost
+
+# Database (MySQL — Docker)
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=sphereos
+DB_USERNAME=sphereos
+DB_PASSWORD=your_password
+
+# Database (PostgreSQL — Supabase cloud option)
+# DB_CONNECTION=pgsql
+# DB_HOST=db.YOURPROJECT.supabase.co
+# DB_PORT=5432
+# DB_DATABASE=postgres
+# DB_USERNAME=postgres
+# DB_PASSWORD=YOUR_SUPABASE_PASSWORD
+# DB_SSLMODE=require
+```
+
+---
+
+## Deployment
+
+The stack is Docker-ready. For production:
+
+1. Point `nginx.conf` to your domain and add SSL certificates
+2. Set `APP_ENV=production` and `APP_DEBUG=false` in `api/.env`
+3. Run `docker compose up -d --build`
+
+For a cloud database, switch to the Supabase PostgreSQL config in `api/.env`.
+
+---
+
+## License
+
+[MIT](LICENSE) — Built by [Legacya Sphere](https://github.com/legacyasphere-id)
