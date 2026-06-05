@@ -4,7 +4,6 @@ header('Content-Type: application/json');
 $base = dirname(__DIR__);
 $out  = [];
 
-// Capture PHP fatal errors
 register_shutdown_function(function () use (&$out) {
     $e = error_get_last();
     if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
@@ -14,28 +13,21 @@ register_shutdown_function(function () use (&$out) {
     }
 });
 
-$out['autoload'] = 'pending';
 require_once $base.'/vendor/autoload.php';
 $out['autoload'] = 'ok';
 
-// Test config files with env() available
-foreach (glob($base.'/config/*.php') as $cfg) {
-    $name = basename($cfg, '.php');
-    try {
-        require_once $cfg;
-        $out['config'][$name] = 'ok';
-    } catch (\Throwable $e) {
-        $out['config'][$name] = $e->getMessage().' @ '.$e->getFile().':'.$e->getLine();
-    }
-}
+$app = require_once $base.'/bootstrap/app.php';
+$out['app'] = 'ok';
 
-// Try creating the Application
-$out['app'] = 'pending';
 try {
-    $app = require_once $base.'/bootstrap/app.php';
-    $out['app'] = get_class($app);
+    $kernel  = $app->make(\Illuminate\Contracts\Http\Kernel::class);
+    $out['kernel'] = 'ok';
+    $request = \Illuminate\Http\Request::create('/up', 'GET');
+    $response = $kernel->handle($request);
+    $out['up_status']  = $response->getStatusCode();
+    $out['up_body']    = $response->getContent();
 } catch (\Throwable $e) {
-    $out['app'] = 'ERROR: '.$e->getMessage().' @ '.$e->getFile().':'.$e->getLine();
+    $out['request_error'] = $e->getMessage().' @ '.$e->getFile().':'.$e->getLine();
 }
 
 echo json_encode($out, JSON_PRETTY_PRINT);
