@@ -29,7 +29,11 @@ return new class extends Migration
             $table->index(['user_id', 'is_pinned']);
         });
 
-        DB::statement('ALTER TABLE knowledge_documents ADD FULLTEXT ft_title_content (title, content)');
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement("CREATE INDEX ft_title_content ON knowledge_documents USING gin(to_tsvector('english', coalesce(title,'') || ' ' || coalesce(content,'')))");
+        } else {
+            DB::statement('ALTER TABLE knowledge_documents ADD FULLTEXT ft_title_content (title, content)');
+        }
     }
 
     /**

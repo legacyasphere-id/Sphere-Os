@@ -1,8 +1,8 @@
 FROM php:8.4-fpm-alpine
 
 RUN apk add --no-cache \
-    git curl libpng-dev libzip-dev zip unzip oniguruma-dev mysql-client \
-    && docker-php-ext-install pdo_mysql mbstring zip gd opcache
+    git curl libpng-dev libzip-dev zip unzip oniguruma-dev mysql-client libpq-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring zip gd opcache
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

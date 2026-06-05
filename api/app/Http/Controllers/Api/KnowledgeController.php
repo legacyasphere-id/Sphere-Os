@@ -33,10 +33,16 @@ class KnowledgeController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $hasFulltext = $this->hasFulltextIndex();
 
-            if ($hasFulltext) {
-                $query->whereRaw('MATCH(title, content) AGAINST(? IN BOOLEAN MODE)', [$search . '*']);
+            if ($this->hasFulltextIndex()) {
+                if (DB::connection()->getDriverName() === 'pgsql') {
+                    $query->whereRaw(
+                        "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(content,'')) @@ plainto_tsquery('english', ?)",
+                        [$search]
+                    );
+                } else {
+                    $query->whereRaw('MATCH(title, content) AGAINST(? IN BOOLEAN MODE)', [$search . '*']);
+                }
             } else {
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', '%' . $search . '%')
@@ -117,9 +123,15 @@ class KnowledgeController extends Controller
 
     private function hasFulltextIndex(): bool
     {
-        $results = DB::select(
-            "SHOW INDEX FROM knowledge_documents WHERE Key_name = 'ft_title_content'"
-        );
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            $results = DB::select(
+                "SELECT 1 FROM pg_indexes WHERE tablename = 'knowledge_documents' AND indexname = 'ft_title_content'"
+            );
+        } else {
+            $results = DB::select(
+                "SHOW INDEX FROM knowledge_documents WHERE Key_name = 'ft_title_content'"
+            );
+        }
 
         return count($results) > 0;
     }

@@ -1,12 +1,16 @@
 #!/bin/sh
 set -e
 
-echo "[entrypoint] Waiting for MySQL..."
+DB_DRIVER="${DB_CONNECTION:-mysql}"
+DB_PORT_DEFAULT=$([ "$DB_DRIVER" = "pgsql" ] && echo "5432" || echo "3306")
+DB_PORT="${DB_PORT:-$DB_PORT_DEFAULT}"
+
+echo "[entrypoint] Waiting for ${DB_DRIVER} at ${DB_HOST}:${DB_PORT}..."
 until php -r "
   new PDO(
-    'mysql:host=' . getenv('DB_HOST') . ';port=' . getenv('DB_PORT') . ';dbname=' . getenv('DB_DATABASE'),
-    getenv('DB_USERNAME'),
-    getenv('DB_PASSWORD')
+    '${DB_DRIVER}:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATABASE}',
+    '${DB_USERNAME}',
+    '${DB_PASSWORD}'
   );
 " 2>/dev/null; do
   sleep 2

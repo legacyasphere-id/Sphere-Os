@@ -58,17 +58,21 @@ class FinanceController extends Controller
     {
         $months = collect(range(11, 0))->map(fn ($i) => now()->subMonths($i));
 
+        $isPgsql   = DB::connection()->getDriverName() === 'pgsql';
+        $dateFmtPaid    = $isPgsql ? "to_char(paid_at, 'YYYY-MM')"     : "DATE_FORMAT(paid_at, '%Y-%m')";
+        $dateFmtExpense = $isPgsql ? "to_char(expense_date, 'YYYY-MM')" : "DATE_FORMAT(expense_date, '%Y-%m')";
+
         $paidRevenue = Invoice::where('user_id', $userId)
             ->where('status', 'paid')
             ->where('paid_at', '>=', now()->subMonths(11)->startOfMonth())
-            ->selectRaw("DATE_FORMAT(paid_at, '%Y-%m') as month, SUM(total) as revenue")
-            ->groupByRaw("DATE_FORMAT(paid_at, '%Y-%m')")
+            ->selectRaw("{$dateFmtPaid} as month, SUM(total) as revenue")
+            ->groupByRaw("{$dateFmtPaid}")
             ->pluck('revenue', 'month');
 
         $expenses = Expense::where('user_id', $userId)
             ->where('expense_date', '>=', now()->subMonths(11)->startOfMonth())
-            ->selectRaw("DATE_FORMAT(expense_date, '%Y-%m') as month, SUM(amount) as expenses")
-            ->groupByRaw("DATE_FORMAT(expense_date, '%Y-%m')")
+            ->selectRaw("{$dateFmtExpense} as month, SUM(amount) as expenses")
+            ->groupByRaw("{$dateFmtExpense}")
             ->pluck('expenses', 'month');
 
         return $months->map(function ($date) use ($paidRevenue, $expenses) {
