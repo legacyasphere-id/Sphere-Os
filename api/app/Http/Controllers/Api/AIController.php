@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AiLog;
 use App\Models\Client;
 use App\Models\Project;
+use App\Models\Proposal;
 use App\Services\AI\AILogger;
 use App\Services\AI\AIRouter;
 use App\Services\AI\ContextBuilder;
@@ -91,6 +92,8 @@ class AIController extends Controller
             'project_id'      => ['required', 'integer', 'exists:projects,id'],
             'tone'            => ['nullable', 'string', 'in:professional,casual,formal'],
             'include_pricing' => ['nullable', 'boolean'],
+            'save_as_draft'   => ['nullable', 'boolean'],
+            'title'           => ['nullable', 'string', 'max:255'],
         ]);
 
         $project = Project::where('id', $validated['project_id'])
@@ -118,9 +121,23 @@ class AIController extends Controller
 
             $this->logger->logSuccess($userId, 'proposal', 'project', $project->id, $prompt, $response);
 
+            $savedProposal = null;
+            if ($validated['save_as_draft'] ?? false) {
+                $savedProposal = Proposal::create([
+                    'user_id'      => $userId,
+                    'project_id'   => $project->id,
+                    'client_id'    => $project->client_id,
+                    'title'        => $validated['title'] ?? "Proposal for {$project->name}",
+                    'content'      => $response->content,
+                    'status'       => 'draft',
+                    'ai_generated' => true,
+                ]);
+            }
+
             return response()->json([
-                'proposal' => $response->content,
-                'meta'     => [
+                'proposal'       => $response->content,
+                'saved_proposal' => $savedProposal ? ['id' => $savedProposal->id, 'title' => $savedProposal->title, 'status' => $savedProposal->status] : null,
+                'meta'           => [
                     'model'       => $response->model,
                     'tokens_used' => $response->totalTokens(),
                     'cost_usd'    => $response->costUsd,

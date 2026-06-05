@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\Expense;
+use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
@@ -47,6 +49,22 @@ class DashboardController extends Controller
             ->limit(5)
             ->get(['id', 'name', 'company', 'status', 'created_at']);
 
+        $outstandingInvoices = Invoice::where('user_id', $userId)
+            ->whereIn('status', ['sent', 'overdue'])
+            ->selectRaw('COUNT(*) as count, COALESCE(SUM(total), 0) as total')
+            ->first();
+
+        $paidThisMonth = Invoice::where('user_id', $userId)
+            ->where('status', 'paid')
+            ->whereMonth('paid_at', $today->month)
+            ->whereYear('paid_at', $today->year)
+            ->sum('total');
+
+        $expensesThisMonth = Expense::where('user_id', $userId)
+            ->whereMonth('expense_date', $today->month)
+            ->whereYear('expense_date', $today->year)
+            ->sum('amount');
+
         return response()->json([
             'stats' => [
                 'clients'         => $clientCount,
@@ -57,6 +75,12 @@ class DashboardController extends Controller
             'upcoming_tasks'   => $upcomingTasks,
             'upcoming_actions' => $upcomingActions,
             'recent_clients'   => $recentClients,
+            'finance_snapshot' => [
+                'outstanding_count' => (int) $outstandingInvoices->count,
+                'outstanding_total' => (float) $outstandingInvoices->total,
+                'paid_this_month'   => (float) $paidThisMonth,
+                'expenses_this_month' => (float) $expensesThisMonth,
+            ],
         ]);
     }
 }

@@ -46,6 +46,46 @@ const router = createRouter({
           name: 'project-detail',
           component: () => import('@/views/projects/ProjectDetailView.vue'),
         },
+        {
+          path: 'proposals',
+          name: 'proposals',
+          component: () => import('@/views/proposals/ProposalsView.vue'),
+        },
+        {
+          path: 'proposals/:id',
+          name: 'proposal-detail',
+          component: () => import('@/views/proposals/ProposalDetailView.vue'),
+        },
+        {
+          path: 'invoices',
+          name: 'invoices',
+          component: () => import('@/views/invoices/InvoicesView.vue'),
+        },
+        {
+          path: 'invoices/:id',
+          name: 'invoice-detail',
+          component: () => import('@/views/invoices/InvoiceDetailView.vue'),
+        },
+        {
+          path: 'expenses',
+          name: 'expenses',
+          component: () => import('@/views/expenses/ExpensesView.vue'),
+        },
+        {
+          path: 'finance',
+          name: 'finance',
+          component: () => import('@/views/finance/FinanceDashboardView.vue'),
+        },
+        {
+          path: 'knowledge',
+          name: 'knowledge',
+          component: () => import('@/views/knowledge/KnowledgeView.vue'),
+        },
+        {
+          path: 'knowledge/:id',
+          name: 'knowledge-detail',
+          component: () => import('@/views/knowledge/KnowledgeDocumentView.vue'),
+        },
       ],
     },
   ],

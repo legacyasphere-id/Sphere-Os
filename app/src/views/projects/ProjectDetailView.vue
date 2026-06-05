@@ -43,6 +43,8 @@ const breakTasks = useBreakTasks()
 const showProposalPanel = ref(false)
 const proposalTone = ref<'professional' | 'casual' | 'formal'>('professional')
 const proposal = useGenerateProposal()
+const savingDraft = ref(false)
+const savedDraftId = ref<number | null>(null)
 
 const editForm = reactive({
   name: '',
@@ -252,7 +254,27 @@ function openProposalPanel() {
 
 async function runGenerateProposal() {
   if (!project.value) return
+  savedDraftId.value = null
   await proposal.generate(project.value.id, proposalTone.value)
+}
+
+async function saveProposalAsDraft() {
+  if (!project.value || !proposal.proposal.value) return
+  savingDraft.value = true
+  try {
+    const res = await api.post('/proposals', {
+      title:        `Proposal — ${project.value.name}`,
+      project_id:   project.value.id,
+      client_id:    project.value.client?.id ?? null,
+      content:      proposal.proposal.value,
+      ai_generated: true,
+    })
+    savedDraftId.value = res.data.id
+  } catch {
+    error.value = 'Failed to save proposal.'
+  } finally {
+    savingDraft.value = false
+  }
 }
 </script>
 
@@ -561,9 +583,26 @@ async function runGenerateProposal() {
             <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
               <pre class="text-sm text-gray-800 whitespace-pre-wrap font-sans">{{ proposal.proposal.value }}</pre>
             </div>
-            <div class="flex justify-between">
-              <button @click="proposal.reset()" class="text-sm text-gray-500 hover:text-gray-700">Regenerate</button>
-              <button @click="showProposalPanel = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+            <div v-if="savedDraftId" class="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span>Saved as draft. </span>
+              <router-link :to="`/proposals/${savedDraftId}`" class="font-medium underline hover:text-green-800">View proposal →</router-link>
+            </div>
+            <div class="flex justify-between items-center">
+              <button @click="proposal.reset(); savedDraftId = null" class="text-sm text-gray-500 hover:text-gray-700">Regenerate</button>
+              <div class="flex gap-3">
+                <button
+                  v-if="!savedDraftId"
+                  @click="saveProposalAsDraft"
+                  :disabled="savingDraft"
+                  class="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 disabled:opacity-50"
+                >
+                  {{ savingDraft ? 'Saving...' : 'Save as Draft' }}
+                </button>
+                <button @click="showProposalPanel = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+              </div>
             </div>
           </div>
         </div>

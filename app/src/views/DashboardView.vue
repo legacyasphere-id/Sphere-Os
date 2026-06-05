@@ -35,11 +35,19 @@ interface DashboardStats {
   overdue_tasks: number
 }
 
+interface FinanceSnapshot {
+  outstanding_count: number
+  outstanding_total: number
+  paid_this_month: number
+  expenses_this_month: number
+}
+
 interface DashboardData {
   stats: DashboardStats
   upcoming_tasks: Task[]
   upcoming_actions: UpcomingAction[]
   recent_clients: RecentClient[]
+  finance_snapshot?: FinanceSnapshot
 }
 
 interface AIUsageDay { date: string; calls: number; cost_usd: number }
@@ -264,6 +272,29 @@ function clientStatusClass(status: string): string {
           </RouterLink>
         </div>
       </div>
+      <!-- Finance Snapshot -->
+      <div v-if="data.finance_snapshot" class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Outstanding</p>
+          <p class="mt-1 text-2xl font-bold text-red-600">${{ data.finance_snapshot.outstanding_total.toFixed(2) }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">{{ data.finance_snapshot.outstanding_count }} invoice{{ data.finance_snapshot.outstanding_count !== 1 ? 's' : '' }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Paid This Month</p>
+          <p class="mt-1 text-2xl font-bold text-green-600">${{ data.finance_snapshot.paid_this_month.toFixed(2) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Expenses This Month</p>
+          <p class="mt-1 text-2xl font-bold text-gray-900">${{ data.finance_snapshot.expenses_this_month.toFixed(2) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Net This Month</p>
+          <p class="mt-1 text-2xl font-bold" :class="(data.finance_snapshot.paid_this_month - data.finance_snapshot.expenses_this_month) >= 0 ? 'text-green-600' : 'text-red-600'">
+            ${{ (data.finance_snapshot.paid_this_month - data.finance_snapshot.expenses_this_month).toFixed(2) }}
+          </p>
+        </div>
+      </div>
+
       <!-- AI Usage Card -->
       <div v-if="aiEnabled && aiUsage" class="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
