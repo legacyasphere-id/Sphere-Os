@@ -152,7 +152,7 @@ class InvoiceController extends Controller
             $this->syncItems($invoice, $validated['items']);
         });
 
-        return response()->json($invoice->fresh()->load(['client:id,name', 'project:id,name', 'items']));
+        return response()->json($invoice->fresh()->load(['client:id,name,company', 'project:id,name', 'proposal:id,title', 'items']));
     }
 
     public function destroy(Request $request, Invoice $invoice): JsonResponse
@@ -173,7 +173,7 @@ class InvoiceController extends Controller
         abort_if($invoice->user_id !== $request->user()->id, 403);
         $invoice->update(['status' => 'sent']);
 
-        return response()->json($invoice->fresh()->load(['client:id,name', 'items']));
+        return response()->json($invoice->fresh()->load(['client:id,name,company', 'project:id,name', 'proposal:id,title', 'items']));
     }
 
     public function markPaid(Request $request, Invoice $invoice): JsonResponse
@@ -181,7 +181,7 @@ class InvoiceController extends Controller
         abort_if($invoice->user_id !== $request->user()->id, 403);
         $invoice->update(['status' => 'paid', 'paid_at' => now()]);
 
-        return response()->json($invoice->fresh()->load(['client:id,name', 'items']));
+        return response()->json($invoice->fresh()->load(['client:id,name,company', 'project:id,name', 'proposal:id,title', 'items']));
     }
 
     private function syncItems(Invoice $invoice, array $items): void
