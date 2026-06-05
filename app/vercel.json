@@ -5,11 +5,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE_API_URL/api/:path*"
+      "destination": "https://sphere-os-l6ta.vercel.app/api/:path*"
     },
     {
       "source": "/sanctum/:path*",
-      "destination": "https://REPLACE_API_URL/sanctum/:path*"
+      "destination": "https://sphere-os-l6ta.vercel.app/sanctum/:path*"
     },
     {
       "source": "/(.*)",
