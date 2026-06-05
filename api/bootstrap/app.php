@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 $basePath = dirname(__DIR__);
 
 // Redirect storage to /tmp on read-only filesystems (Vercel serverless)
+// Note: bootstrap path is NOT redirected — packages.php/services.php must
+// be read from the bundled app directory where composer wrote them.
 $isServerless = getenv('VERCEL') !== false || !is_writable($basePath.'/storage/logs');
 
 if ($isServerless) {
@@ -16,7 +18,6 @@ if ($isServerless) {
         '/tmp/storage/framework/sessions',
         '/tmp/storage/framework/views',
         '/tmp/storage/logs',
-        '/tmp/bootstrap/cache',
     ] as $dir) {
         is_dir($dir) || mkdir($dir, 0755, true);
     }
@@ -40,7 +41,6 @@ $app = Application::configure(basePath: $basePath)
 
 if ($isServerless) {
     $app->useStoragePath('/tmp/storage');
-    $app->useBootstrapPath('/tmp/bootstrap');
 }
 
 return $app;

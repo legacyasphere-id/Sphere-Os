@@ -4,6 +4,10 @@
     {
       "src": "public/index.php",
       "use": "vercel-php@0.7.2"
+    },
+    {
+      "src": "public/check.php",
+      "use": "vercel-php@0.7.2"
     }
   ],
   "routes": [
