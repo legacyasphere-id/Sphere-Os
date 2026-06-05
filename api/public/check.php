@@ -40,13 +40,25 @@ try {
     $out['db_connect'] = $e->getMessage();
 }
 
+// Run migrations if ?migrate=1 is passed
+if (isset($_GET['migrate'])) {
+    try {
+        $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
+        $kernel->bootstrap();
+        $exit = \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $out['migrate'] = $exit === 0 ? 'ok' : 'exit:'.$exit;
+        $out['migrate_output'] = \Illuminate\Support\Facades\Artisan::output();
+    } catch (\Throwable $e) {
+        $out['migrate_error'] = $e->getMessage();
+    }
+}
+
 try {
     $kernel  = $app->make(\Illuminate\Contracts\Http\Kernel::class);
     $out['kernel'] = 'ok';
     $request = \Illuminate\Http\Request::create('/up', 'GET');
     $response = $kernel->handle($request);
     $out['up_status'] = $response->getStatusCode();
-    // Only include body on non-200 to avoid noise; strip HTML tags for readability
     if ($response->getStatusCode() !== 200) {
         $out['up_error'] = trim(strip_tags($response->getContent()));
     } else {
