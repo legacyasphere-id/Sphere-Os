@@ -4,6 +4,7 @@ services:
       context: ./api
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file: ./api/.env
     volumes:
       - ./api:/var/www/html
       - /var/www/html/vendor
