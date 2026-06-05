@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 
 $basePath = dirname(__DIR__);
 
-// Vercel serverless: only /tmp is writable; pre-create required dirs
-if (isset($_SERVER['VERCEL'])) {
+// Redirect storage to /tmp on read-only filesystems (Vercel serverless)
+$isServerless = getenv('VERCEL') !== false || !is_writable($basePath.'/storage/logs');
+
+if ($isServerless) {
     foreach ([
         '/tmp/storage/framework/cache/data',
         '/tmp/storage/framework/sessions',
@@ -36,7 +38,7 @@ $app = Application::configure(basePath: $basePath)
         );
     })->create();
 
-if (isset($_SERVER['VERCEL'])) {
+if ($isServerless) {
     $app->useStoragePath('/tmp/storage');
     $app->useBootstrapPath('/tmp/bootstrap');
 }
