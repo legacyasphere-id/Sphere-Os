@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ./api/.env
+    volumes:
+      - ./api:/var/www/html
+      - /var/www/html/vendor
+    environment:
+      - APP_ENV=production
+    depends_on:
+      - db
+    networks:
+      - sphereos
+
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - sphereos
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./api/public:/var/www/html/public:ro
+    depends_on:
+      - app
+      - frontend
+    networks:
+      - sphereos
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sphereos
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - sphereos
+
+networks:
+  sphereos:
+    driver: bridge
+
+volumes:
+  db_data:

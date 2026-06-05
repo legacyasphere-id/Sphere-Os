@@ -1,0 +1,19 @@
+{
+  "buildCommand": "npm run build-only",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://REPLACE_API_URL/api/:path*"
+    },
+    {
+      "source": "/sanctum/:path*",
+      "destination": "https://REPLACE_API_URL/sanctum/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
